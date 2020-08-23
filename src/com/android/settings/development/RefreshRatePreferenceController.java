@@ -14,6 +14,9 @@
 package com.android.settings.development;
 
 import android.content.Context;
+import android.os.Parcel;
+import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.provider.Settings;
 
 import androidx.preference.ListPreference;
@@ -79,22 +82,13 @@ public class RefreshRatePreferenceController extends AbstractPreferenceControlle
         switch (refreshRate) {
             case 0:
             default:
-                Settings.System.putInt(mContext.getContentResolver(),
-                        Settings.System.PEAK_REFRESH_RATE, MAX_REFRESH_RATE);
-                Settings.System.putInt(mContext.getContentResolver(),
-                        Settings.System.MIN_REFRESH_RATE, 0);
+                setFPS(0);
                 break;
             case 1:
-                Settings.System.putInt(mContext.getContentResolver(),
-                        Settings.System.PEAK_REFRESH_RATE, 60);
-                Settings.System.putInt(mContext.getContentResolver(),
-                        Settings.System.MIN_REFRESH_RATE, 60);
+                setFPS(60);
                 break;
             case 2:
-                Settings.System.putInt(mContext.getContentResolver(),
-                        Settings.System.PEAK_REFRESH_RATE, MAX_REFRESH_RATE);
-                Settings.System.putInt(mContext.getContentResolver(),
-                        Settings.System.MIN_REFRESH_RATE, MAX_REFRESH_RATE);
+                setFPS(MAX_REFRESH_RATE);
                 break;
         }
         updateRefreshRateSummary(refreshRate);
@@ -108,5 +102,17 @@ public class RefreshRatePreferenceController extends AbstractPreferenceControlle
         } else {
             mRefreshRate.setSummary(R.string.refresh_rate_summary_auto);
         }
+    }
+
+    private final void setFPS(int v) {
+        Parcel data = Parcel.obtain();
+        data.writeInterfaceToken("android.ui.ISurfaceComposer");
+        data.writeInt(v);
+        try {
+            ServiceManager.getService("SurfaceFlinger").transact(1035, data, (Parcel) null, 0);
+        } catch (RemoteException e) {
+            // nothing we can do
+        }
+        data.recycle();
     }
 }
